@@ -1,0 +1,26 @@
+<name>Hyungho Choi</name>
+<id>20190673</id>
+<assignmentno>1</assignmentno>
+
+<helpfrom>
+Had advice from a friend to closely look at the assignment for clues, and for the concept of DFA.
+</helpfrom>
+
+<timespent>
+A day for coding itself, and another half-day for setting up workflow (only for first assignment, I suppose)
+</timespent>
+
+<assessment>
+1. A very good chance to learn how to code in C.
+    Although I am sure I did the entire thing wrong, I do have a very good grasp of how the coding process works and what & where to look for when I am stuck. This was a good level of challenge.
+2. Hectic coding
+    I learned most of my coding through Python. So on alot of aspects, things were much harder. But on some other occasions, it was the other way around (i.e. global variables.)
+    But my overall regret is that I wasted too much namespace, and used too many unneccessary global variables and too many lines on the main functions. I hope I could improve on coding more consise on C from later assignments.
+3. Final error (Suggestion)
+    There was an error in my code that I was not able to detect through the published examples. It was the string "/*/". My code initially looked at the first two strings, and started the comment state (in comment), but right after that by looking at the last two strings came back to script state (in script).
+    So this needed to be fixed with the "state 3 workaround." But the string "/*/" was not included in any of the published test cases. So my suggestion would be adding that somewhere in the examples.
+<\assessment>
+
+<gradeinfo>
+This is my first time coding in C. I just wanted to say I had alot of fun. If I could have good grades for it, that would be great. But if not, that would be okay too! My wish is that the TA's have fun grading this.
+</gradeinfo>

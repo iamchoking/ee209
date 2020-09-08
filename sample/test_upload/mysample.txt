@@ -1,0 +1,7 @@
+this is a generic sample made by 20190673
+/*comment*/
+there was a comment before.
+/*mulitline
+comment
+hello */
+above was a 3 line comment
