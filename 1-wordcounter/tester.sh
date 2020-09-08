@@ -12,3 +12,5 @@ do
     diff error1 error2
 
 done
+
+bash ./clean.sh || true

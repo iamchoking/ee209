@@ -49,9 +49,6 @@ void incomment(){
 }
 
 int main(){
-    if(curC == '\n' && nxtC == EOF){
-        printf("0 0 0\n");
-    }
 
     state = 1; /*initializing each variables*/
     nxtC = getc(stdin); /*used getc instead of getchar to easily change streams of input*/
@@ -61,6 +58,10 @@ int main(){
     ln = 0;
     cmtl = 0;
     
+    if((curC == '\n' && nxtC == EOF) || curC == EOF){
+        printf("0 0 0\n");
+        return 0;
+    }
 
     while(curC != EOF){ /*the "state loop" begins*/
         if(state == 1){
