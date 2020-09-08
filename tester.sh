@@ -11,4 +11,4 @@ do
     echo "errors  :"
     diff error1 error2
 
-donea.out
+done
