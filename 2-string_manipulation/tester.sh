@@ -101,35 +101,22 @@ echo -e "2. DoReplace()(format: ./~ -r [fromStr] [toStr] < (stdin redirection) )
 echo -e "\n----------------------------------------------------------------\n"
 echo -e "3. DoDiff()(format: ./~ -d [file1] [file2]"
 
-# FILES=${3:-./test/*.txt}
-#     for i in $FILES
-#     do
-#         for j in $FILES
-#         do
-#             echo -e "\ntesting for $i to $j"
-#             ${1:-./sgrep_sol} -d    $i $j  > output1  2> error1
-#             ${2:-./2_sgrep}   -d    $i $j  > output2  2> error2
-#             compareOutput
-#         done
-#     done
+FILES=${3:-./test/*.txt}
+    for i in $FILES
+    do
+        for j in $FILES
+        do
+            echo -e "\ntesting for $i to $j"
+            ${1:-./sgrep_sol} -d    $i $j  > output1  2> error1
+            ${2:-./2_sgrep}   -d    $i $j  > output2  2> error2
+            compareOutput
+        done
+    done
 
 echo -e "\nBasic"
-${1:-./sgrep_sol} -d    ./test/empty.txt ./test/empty.txt  > output1  2> error1
-${2:-./2_sgrep}   -d    ./test/empty.txt ./test/empty.txt  > output2  2> error2
+${1:-./sgrep_sol} -d    ./test/microsoft.txt ./test/empty.txt  > output1  2> error1
+${2:-./2_sgrep}   -d    ./test/microsoft.txt ./test/empty.txt  > output2  2> error2
 compareOutput
-
-
-# for f in $FILES
-# do
-#     echo -e "\n\ntesting for $f"
-#     ${1:-./sgrep_sol}            < $f  > output1  2> error1
-#     ${2:-./2_sgrep}              < $f  > output2  2> error2
-#     echo "outputs :"
-#     diff output1 output2
-#     echo "errors  :"
-#     diff error1 error2
-
-# done
 
 # rm -f output*
 # rm -f error*

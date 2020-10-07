@@ -7,4 +7,7 @@ rm -f -v 1_client
 rm -f -v 2_sgrep
 rm -f -v a.out
 
+echo "Removing Outputs/Error Streams..."
+rm -f output*
+rm -f error*
 echo "Clean Complete"
