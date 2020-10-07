@@ -51,7 +51,7 @@ char* StrCopy(char *pcDest, const char* pcSrc)
     cur++;
   }
 
-  *(++dest) = '\0';
+  *dest = *cur;
   
 
   return pcDest;
