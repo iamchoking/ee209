@@ -15,6 +15,6 @@ cp readme ./submission/
 cd ./submission/
 source ~/.bashrc
 
-tar -zcf "$ID"_assign2.tar.gz *
+tar -zcf 20190673_assign2.tar.gz *
 
 echo "EE209 SUBMIT >> Submission file successfully generated"

@@ -51,7 +51,7 @@ char* StrCopy(char *pcDest, const char* pcSrc)
     cur++;
   }
 
-  *(++dest) = '\0';
+  *dest = *cur;
   
 
   return pcDest;
@@ -135,7 +135,7 @@ char *StrConcat(char *pcDest, const char* pcSrc)
     srcCur++;
     destCur++;
   }
-  *(++destCur) = '\0';
+  *(destCur) = *srcCur;
   
   return pcDest;
 }

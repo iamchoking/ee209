@@ -135,7 +135,7 @@ char *StrConcat(char *pcDest, const char* pcSrc)
     srcCur++;
     destCur++;
   }
-  *(++destCur) = '\0';
+  *(destCur) = *srcCur;
   
   return pcDest;
 }
