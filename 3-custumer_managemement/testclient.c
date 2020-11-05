@@ -356,7 +356,7 @@ CorrectnessTest6() {
 
 	DB_T d;
 	int result;
-	int max_num = 200;
+	int max_num = 50;
 	
 	char *name = (char*)malloc(10 * sizeof(char));
 	char *id = (char*)malloc(10 * sizeof(char));
@@ -412,6 +412,14 @@ CorrectnessTest6() {
 		sprintf(id, "id%d",i);
 		result += TestRegisterCustomer(d, id,name,i+1,((i<max_num)?-1:0));
 	}
+
+	for(int i = 0;i<max_num*2;i+=5){
+		// Prints "Hello world!" on hello_world
+		sprintf(name, "name%d",i);
+		sprintf(id, "id%d",i);
+		result += TestUnregisterCustomerByID(d, id,0);
+	}
+
 	printDB(d);
 
 	DestroyCustomerDB(d);
@@ -483,7 +491,7 @@ CorrectnessTest7() {
 
 	DestroyCustomerDB(d);
 
-	printf("\nCorrectness Test 1 %s\n\n",
+	printf("\nCorrectness Test 7 %s\n\n",
 		   (result >= 0)? "PASSED" : "FAILED!");
 
 	return (result >= 0)? 0 : -1;
