@@ -1,6 +1,8 @@
 {
 	"files.associations": {
 		"thread": "c",
-		"*.tcc": "c"
+		"*.tcc": "c",
+		"typeindex": "c",
+		"typeinfo": "c"
 	}
 }
