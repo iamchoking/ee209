@@ -7,9 +7,8 @@
 #include<assert.h>
 #include<stdlib.h>
 
-#define LINE_SIZE 1024
 
-#define DEBUG FALSE //change this to show step by step
+#define DEBUG_LEX FALSE //change this to show step by step
 
 enum {FALSE, TRUE};
 enum {FAIL, SUCCESS};
@@ -51,6 +50,7 @@ void free_token(void* token, void* dummy){
 void delete_tokens(DynArray_T tokens){
 	DynArray_map(tokens, free_token, NULL);
 	DynArray_free(tokens);
+	// free(tokens);
 }
 
 int isend(char c){ //checks if c is an end-like character
@@ -62,23 +62,23 @@ void err_alloc(char* programName){fprintf(stderr, "%s: Memory Allocation Failed\
 void err_unmatched(char* programName){fprintf(stderr, "%s: ERROR - unmatched quote\n",programName);}
 
 int print_token(token_t token, char include_type){// include_type = 0 for simple print, 1 for specifying token type
-	if(include_type) printf("[");
+	if(include_type) printf("<LEX> [");
 	if(include_type){
 		switch (token->type){
 			case(PIPE):
-			printf("PIPE, ");
+			printf("PIPE     , ");
 			break;
 
 			case(NORMAL):
-			printf("NORMAL, ");
+			printf("NORMAL   , ");
 			break;
 
 			case(REDIR_IN):
-			printf("REDIR_IN, ");
+			printf("REDIR_IN , ");
 			break;			
 
 			case(REDIR_OUT):
-			printf("RDIR_OUT, ");
+			printf("REDIR_OUT, ");
 			break;
 		}
 	}
@@ -111,13 +111,15 @@ void print_tokens(DynArray_T tokens, char include_type){
 
 int add_nicely(enum TokenType type, char* value, DynArray_T tokens, char* programName){
 	token_t token = new_token(type,value);
+	// printf("%s\n",value);
 	if(!token){ err_alloc(programName); return FAIL;}
 	if(!DynArray_add(tokens,token)){err_alloc(programName); return FAIL;}
 	return SUCCESS;
 }
 
 int lex_line(char* line, DynArray_T tokens, char* programName){
-	assert(line && tokens);
+	assert(line);
+	assert(tokens);
 
 	enum State{IDLE, IN_WORD, IN_QUOTE};
 
@@ -126,9 +128,9 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 	// enum TokenType cur_type = NORMAL;
 	char* cur_val = value_temp; // cursor (traverses through temp. value)
 	char* cur_line = line; //cursor (traverses through line)
-
 	while(1){
-		if(DEBUG){printf("Char: %c, State: %d\n",*cur_line,state);}
+		if(DEBUG_LEX){printf("Char: %c, State: %d\n",*cur_line,state);}
+		
 		switch (state){
 		case IDLE:
 			if (isspace(*cur_line)){
@@ -161,6 +163,8 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 				// if(check_builtin2(value_temp)){
 				// 	add_nicely(BUILTIN,value_temp,tokens,programName);
 				// }
+				// add_nicely(NORMAL,value_temp,tokens,programName);
+				// DynArray_add(tokens,new_token(NORMAL,value_temp));
 				add_nicely(NORMAL,value_temp,tokens,programName);
 				// printf("Successfully added.\n");
 				cur_val = value_temp;
@@ -174,6 +178,7 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 			}
 			else{
 				*cur_val = *cur_line;
+				// printf("%c",*cur_val);
 				cur_line++;
 				cur_val++;
 				break;

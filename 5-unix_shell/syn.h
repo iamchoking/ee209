@@ -16,4 +16,8 @@ void delete_cmds(DynArray_T cmds);
 
 int syn(DynArray_T tokens, DynArray_T cmds, char* programName);
 
+char* cmd_name(cmd_t cmd);
+char** cmd_argv(cmd_t cmd);
+int cmd_len(cmd_t cmd);
+int cmd_type(cmd_t cmd);
 #endif

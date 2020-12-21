@@ -7,8 +7,8 @@
 #include "syn.h"
 #include "lex.h"
 
-#define NUM_BUILTINS 4
-const char* ISH_BUILTINS[] = {"cd","setenv","unsetenv","exit"};
+#define NUM_BUILTINS 5
+const char* ISH_BUILTINS[] = {"cd","setenv","unsetenv","exit","alias"};
 //add alias here later
 
 enum{FAIL,SUCCESS};
@@ -19,11 +19,11 @@ enum{FALSE,TRUE};
 void err_destnotspec(char* programName){fprintf(stderr, "%s: Pipe or redirection destination not specified\n",programName);}
 void err_noname(char* programName){fprintf(stderr, "%s: Missing command name\n",programName);}
 
-void err_builtin_cd(char* programName){fprintf(stderr, "%s: cd takes one parameter\n",programName);}
-void err_builtin_setenv(char* programName){fprintf(stderr, "%s: setenv takes one or two parameters\n",programName);}
-void err_builtin_unsetenv(char* programName){fprintf(stderr, "%s: unsetenv takes one parameter\n",programName);}
-void err_builtin_exit(char* programName){fprintf(stderr, "%s: exit does not take any parameters\n",programName);}
-void err_builtin_alias(char* programName){fprintf(stderr, "%s: alias takes one parameter\n",programName);}
+void err_params_cd(char* programName){fprintf(stderr, "%s: cd takes one parameter\n",programName);}
+void err_params_setenv(char* programName){fprintf(stderr, "%s: setenv takes one or two parameters\n",programName);}
+void err_params_unsetenv(char* programName){fprintf(stderr, "%s: unsetenv takes one parameter\n",programName);}
+void err_params_exit(char* programName){fprintf(stderr, "%s: exit does not take any parameters\n",programName);}
+void err_params_alias(char* programName){fprintf(stderr, "%s: alias takes one parameter\n",programName);}
 
 struct cmd{
 	enum cmdType type;
@@ -31,6 +31,11 @@ struct cmd{
 	char *name;
 	char **argv;
 };
+
+char* cmd_name(cmd_t cmd){return cmd->name;}
+char** cmd_argv(cmd_t cmd){return cmd->argv;}
+int cmd_len(cmd_t cmd){return cmd->len;}
+int cmd_type(cmd_t cmd){return cmd->type;}
 
 int checkif_builtin(char* name){
 	// printf("%lu",sizeof(ISH_BUILTINS));
@@ -47,7 +52,7 @@ void add_cmd(DynArray_T tokens, DynArray_T cmds, int startI, int endI){
 	cmd_t cmd;
 	cmd = (cmd_t)malloc(sizeof(struct cmd));
 	cmd->len = endI-startI + 1;
-	cmd->argv = calloc(cmd->len,sizeof(char*));
+	cmd->argv = calloc(cmd->len+1,sizeof(char*));
 	for(int i = startI;i<=endI;i++){
 		// tmp = "X";
 		tmp = token_value((token_t)DynArray_get(tokens,i));
@@ -55,6 +60,7 @@ void add_cmd(DynArray_T tokens, DynArray_T cmds, int startI, int endI){
 		strcpy(cmd->argv[i-startI],tmp);
 		// printf("set %s to %s, result %d\n",tmp,cmd->argv[i],res);
 	}
+	cmd->argv[cmd->len] = NULL; //null termination of argv is important!
 	cmd->name = cmd->argv[0];
 
 	if(startI == 0 && checkif_builtin(cmd->name)){cmd->type = CMD_BUILTIN;}
@@ -63,23 +69,23 @@ void add_cmd(DynArray_T tokens, DynArray_T cmds, int startI, int endI){
 	DynArray_add(cmds,cmd);
 }
 
-int builtin_validate(cmd_t cmd,char* progName){
+int builtin_validate(cmd_t cmd,int total_len,char* progName){
 	if(cmd->type != CMD_BUILTIN){return TRUE;}
 	switch(cmd->name[0]){
 		case 'c': //cd
-			if(cmd->len != 2 && cmd->len != 1){err_builtin_cd(progName);return FALSE;}
+			if((total_len != 1) || (cmd->len != 2 && cmd->len != 1) ){err_params_cd(progName);return FALSE;}
 			break;
 		case 's': //setenv
-			if(cmd->len != 3 && cmd->len != 2){err_builtin_setenv(progName);return FALSE;}
+			if((total_len != 1) || (cmd->len != 3 && cmd->len != 2)){err_params_setenv(progName);return FALSE;}
 			break;
 		case 'u': //unsetenv
-			if(cmd->len != 2){err_builtin_unsetenv(progName);return FALSE;}
+			if((total_len != 1) || (cmd->len != 2)){err_params_unsetenv(progName);return FALSE;}
 			break;
 		case 'e': //exit
-			if(cmd->len != 1){err_builtin_exit(progName);return FALSE;}
+			if((total_len != 1) || (cmd->len != 1)){err_params_exit(progName);return FALSE;}
 			break;
 		case 'a': //later for alias
-			if(cmd->len != 2){err_builtin_alias(progName);return FALSE;}
+			if((total_len != 1) || (cmd->len != 2)){err_params_alias(progName);return FALSE;}
 			break;
 	}
 	return TRUE;
@@ -88,12 +94,13 @@ int builtin_validate(cmd_t cmd,char* progName){
 void free_cmd(void* pcmd, void* dummy){
 	cmd_t cmd = (cmd_t)pcmd;
 	for(int i = 0;i<cmd->len;i++){free (cmd->argv[i]);}
+	free(cmd->argv);
 	free(cmd);
 }
 
 void print_cmd(void* pcmd, void* dummy){
 	cmd_t cmd = (cmd_t) pcmd;
-	printf("<CMD> [ type: ");
+	printf("<SYN> [ type: ");
 	if(cmd->type == CMD_BUILTIN){printf("BUILTIN");}
 	else{printf("NORMAL ");}
 	printf(", len: %d, name: %s, args: {",cmd->len,cmd->name);
@@ -133,7 +140,7 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 			}
 			else{
 				// if((! strcmp(token_value(current),"cd")) && len > 2){
-				// 	err_builtin_cd(programName);
+				// 	err_params_cd(programName);
 				// } //poetntially do builtin error handling here
 				state = OK;
 			}
@@ -160,7 +167,7 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 	if(current_start<len){add_cmd(tokens,cmds,current_start,len-1);}
 	//initial cmd built
 
-	if(len != 0){ return builtin_validate(DynArray_get(cmds,0),programName);}
+	if(len != 0){ return builtin_validate(DynArray_get(cmds,0),DynArray_getLength(cmds),programName);}
 
 	return SUCCESS;
 }
