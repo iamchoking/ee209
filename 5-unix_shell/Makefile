@@ -24,7 +24,7 @@ exec_main: dynarray.o exec_main.o syn.o lex.o exec.o
 
 #clean level
 clean:
-	rm -f *.o
+	rm -f *.o out_*
 
 scrub:
-	rm -f *.o lex_main syn_main exec_main ish
+	rm -f *.o out_* lex_main syn_main exec_main ish

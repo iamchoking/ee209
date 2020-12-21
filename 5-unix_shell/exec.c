@@ -11,12 +11,13 @@
 #include<sys/wait.h>
 #include<unistd.h>
 #include<errno.h>
+#include<fcntl.h>
 
 enum {FALSE,TRUE};
 enum {FAIL,SUCCESS};
 
 void errno_handle(char* name,char debug){
-	if(debug){fprintf(stderr,"<EXEC> <BRANCH_ERR> %d: ",getpid());}
+	if(debug){fprintf(stderr,"<EXEC> [<BRANCH_ERR> %d]\n",getpid());}
 	switch (errno){
 	case 1:
 		fprintf(stderr,"%s: Operation not permitted\n",name);
@@ -38,7 +39,7 @@ void errno_handle(char* name,char debug){
 		break;
 
 	default:
-		fprintf(stderr,"%s: prgram exited with errno %d\n",name,errno);
+		fprintf(stderr,"%s: prgram exited with errno %d\n",name,errno );
 		break;
 	}
 }
@@ -83,6 +84,91 @@ int exec_builtin(cmd_t cmd, char* programName,char debug){
 	return SUCCESS;
 }
 
+int redirect_in_check(cmd_t cmd){
+	char ** argv = cmd_argv(cmd);
+	for(int i = 0; i<cmd_len(cmd); i++){
+		if(! strcmp("<",argv[i])){
+			return i;
+		}
+	}
+	return 0;
+}
+
+int redirect_out_check(cmd_t cmd){
+	char ** argv = cmd_argv(cmd);
+	for(int i = 0; i<cmd_len(cmd); i++){
+		if(! strcmp(">",argv[i])){
+			return i;
+		}
+	}
+	return 0;
+}
+
+int redirect_in(cmd_t cmd,int index,char* programName,int debug){
+	char ** newargv = calloc(cmd_len(cmd)-1,sizeof(char*));
+	char ** argv = cmd_argv(cmd);
+	char *  target; //target for redirection
+
+	if(debug){
+		printf("<EXEC> REDIRECTION-IN detected: %s\n\t",cmd_name(cmd));
+		print_cmd(cmd,NULL);
+		printf("<EXEC> changed to:\n\t");
+	}
+
+	for(int i = 0; i<=cmd_len(cmd); i++){
+		if(i<index)             {newargv[i] = argv[i];}
+		else if(i == index)     {free(argv[i]);} //free the redirection operator itself
+		else if(i == index + 1) {target = argv[i];} //syntactic analysis made sure that index + 1 is valid
+		else                    {newargv[i-2] = argv[i];}
+	}
+
+	cmd_set_argv(cmd,newargv);
+	cmd_set_len (cmd,cmd_len(cmd)-2);
+	if(debug){print_cmd(cmd,NULL);}
+
+	int in_fd = open(target, O_RDONLY); 
+	free(target);
+	if(in_fd == -1){errno_handle(programName,debug);return FAIL;}
+	fflush(stdin);fflush(stdout);fflush(stderr);
+
+	dup2(in_fd,0);
+	close(in_fd);
+	
+	return SUCCESS;
+}
+
+int redirect_out(cmd_t cmd,int index,char* programName,int debug){
+	char ** newargv = calloc(cmd_len(cmd)-1,sizeof(char*)); //total len - 2 + 1 due to NULL termination
+	char ** argv = cmd_argv(cmd);
+	char *  target; //target for redirection
+
+	if(debug){
+		printf("<EXEC> REDIRECTION-OUT detected: %s\n\t",cmd_name(cmd));
+		print_cmd(cmd,NULL);
+		printf("<EXEC> changed to:\n\t");
+	}
+
+	for(int i = 0; i<=cmd_len(cmd); i++){
+		if(i<index)             {newargv[i] = argv[i];}
+		else if(i == index)     {free(argv[i]);} //free the redirection operator itself
+		else if(i == index + 1) {target = argv[i];} //syntactic analysis made sure that index + 1 is valid
+		else                    {newargv[i-2] = argv[i];}
+	}
+	cmd_set_argv(cmd,newargv);
+	cmd_set_len (cmd,cmd_len(cmd)-2);
+	if(debug){print_cmd(cmd,NULL);}
+
+	int out_fd = open(target,O_WRONLY|O_CREAT|O_TRUNC,0666);
+	free(target);
+	if(out_fd == -1){errno_handle(programName,debug);return FAIL;}
+	fflush(stdin);fflush(stdout);fflush(stderr);
+
+	dup2(out_fd,1);
+	close(out_fd);
+
+	return SUCCESS;
+}
+
 int exec(DynArray_T cmds,char* programName,char debug){
 	int cmd_len_total = DynArray_getLength(cmds);
 	// cmd_t cur_cmd; //cursor for current cmd
@@ -93,18 +179,19 @@ int exec(DynArray_T cmds,char* programName,char debug){
 		return SUCCESS;
 	}
 
-	fflush(stdout);
-	fflush(stdin);
-	//now, we are ready to fork. and ignore the CMD_BUILTIN commands
+	//used for redirection.
+	int redir_in_index ;
+	int redir_out_index;
+
 	int status = 0; // used for waiting / status checking
-
-	int pid = fork(); //initial fork away from shell process
-
 	int fin_pid; //used later in catching finished pid (debug purposes)
 
+	//now, we are ready to fork. and ignore the CMD_BUILTIN commands
+	fflush(stdin);fflush(stdout);fflush(stderr);
+	int pid = fork(); //initial fork away from shell process
 	if (pid == 0){ 
 		for(int i =3;i<10;i++){close(i);} //IMPORTANT: close all but default file descriptors
-		if(debug){printf("<EXEC> pipe root process started: %d\n",getpid());}
+		if(debug){printf("<EXEC> pipe root   process started : %d\n",getpid());}
 		// exit(0);
 		// first normal process in pipeline = parent of all further processes
 		//uninstall installed signal handlers here.
@@ -118,14 +205,21 @@ int exec(DynArray_T cmds,char* programName,char debug){
 				if(pipe(fd)==-1){err_pipe(programName);exit(EXIT_FAILURE);}
 				pid_2 = fork();
 				if(!pid_2){ //parent process: redirect stdout to fd[1] and run process
-					if(debug){printf("<EXEC> pipe branch process started: %d\n",getpid());}
+					if(debug){printf("<EXEC> pipe branch process started : %d\n",getpid());}
 					if(i<cmd_len_total-1){
 						dup2(fd[1],1);
 						close(fd[0]);
 						close(fd[1]);
 						// fprintf(stderr,"stdout redirected: %d\n",i);
 					}
-					cmd_cur = DynArray_get(cmds,i);
+					cmd_cur = (cmd_t)DynArray_get(cmds,i);
+					//REDIRECTION: note that only the first command can redirect in / last command can redirect out
+					if(i == 0               && (redir_in_index  = redirect_in_check (cmd_cur))){
+						if(redirect_in (cmd_cur,redir_in_index,programName,debug) == FAIL){exit(EXIT_FAILURE);}
+					}
+					if(i == cmd_len_total-1 && (redir_out_index = redirect_out_check(cmd_cur))){
+						if(redirect_out(cmd_cur,redir_out_index,programName,debug) == FAIL){exit(EXIT_FAILURE);}
+					}
 					// fprintf(stderr,"executing cmd # %d: %s\n",i,cmd_name(cmd_cur));
 					execvp(cmd_name(cmd_cur),cmd_argv(cmd_cur));
 
@@ -155,17 +249,18 @@ int exec(DynArray_T cmds,char* programName,char debug){
 			}
 			// wait(&status_2); 
 			while((fin_pid = wait(&status))>0){
-				if(debug){printf("<EXEC> pipe branch process finished: %d\n",fin_pid);}
+				fflush(stdin);fflush(stdout);fflush(stderr);
+				if(debug){printf("<EXEC> pipe branch process finished: %d (exit status %d)\n",fin_pid,status);}
 			}
-			fflush(stdout);
-			fflush(stdin);
+		fflush(stdin);fflush(stdout);fflush(stderr);
 		}
 		exit(EXIT_SUCCESS);
 	} //end of initial fork
 	else{
 		// shell waits for all process to finish
 		while((fin_pid = wait(&status))>0){
-			if(debug){printf("<EXEC> pipe root process finished: %d\n",fin_pid);}
+			fflush(stdin);fflush(stdout);fflush(stderr);
+			if(debug){printf("<EXEC> pipe root   process finished: %d (exit status %d)\n",fin_pid,status);}
 		}
 	}
 	// while(wait(&status) > 0){}

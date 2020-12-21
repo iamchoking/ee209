@@ -9,7 +9,6 @@
 
 #define NUM_BUILTINS 5
 const char* ISH_BUILTINS[] = {"cd","setenv","unsetenv","exit","alias"};
-int REDIR_FLAGS[] = {0,0,0};
 //add alias here later
 
 enum{FAIL,SUCCESS};
@@ -44,16 +43,6 @@ char* cmd_name(cmd_t cmd){return cmd->name;}
 char** cmd_argv(cmd_t cmd){return cmd->argv;}
 int cmd_len(cmd_t cmd){return cmd->len;}
 int cmd_type(cmd_t cmd){return cmd->type;}
-
-int cmd_set_len(cmd_t cmd, int newlen){
-	cmd->len = newlen;
-	return SUCCESS;
-}
-int cmd_set_argv(cmd_t cmd, char** newargv){
-	free(cmd->argv);
-	cmd->argv = newargv;
-	return SUCCESS;
-}
 
 int checkif_builtin(char* name){
 	// printf("%lu",sizeof(ISH_BUILTINS));
@@ -139,25 +128,25 @@ void delete_cmds(DynArray_T cmds){
 
 enum REDIR_FLAG_INDEX{INDEX_PIPE,INDEX_REDIR_IN,INDEX_REDIR_OUT};
 
-int check_flags(int type,char*programName){
+int check_flags(int type,int* redir_flags,char*programName){
 	if(type == NORMAL){return SUCCESS;}
 	// printf("%d,%d,%d",redir_flags[0],redir_flags[1],redir_flags[2]);
 	//check flag phase
-	if(type == PIPE && REDIR_FLAGS[INDEX_PIPE]){err_mult_redir_out(programName);}
-	else if(type == REDIR_OUT && REDIR_FLAGS[INDEX_REDIR_OUT]){err_mult_redir_out(programName);}
-	else if(type == REDIR_IN && REDIR_FLAGS[INDEX_REDIR_IN]){err_mult_redir_in(programName);}
+	if(type == PIPE && redir_flags[INDEX_PIPE]){err_mult_redir_out(programName);}
+	else if(type == REDIR_OUT && redir_flags[INDEX_REDIR_OUT]){err_mult_redir_out(programName);}
+	else if(type == REDIR_IN && redir_flags[INDEX_REDIR_IN]){err_mult_redir_in(programName);}
 	else{
 		//raise flag phase
 		switch(type){
 			case PIPE:
-				REDIR_FLAGS[REDIR_IN] = 1;
+				redir_flags[REDIR_IN] = 1;
 				break;
 			case REDIR_IN:
-				REDIR_FLAGS[REDIR_IN] = 1;
+				redir_flags[REDIR_IN] = 1;
 				break;
 			case REDIR_OUT:
-				REDIR_FLAGS[INDEX_PIPE] = 1;
-				REDIR_FLAGS[REDIR_OUT] = 1;
+				redir_flags[INDEX_PIPE] = 1;
+				redir_flags[REDIR_OUT] = 1;
 				break;		
 		}
 		return SUCCESS;
@@ -170,16 +159,15 @@ int check_flags(int type,char*programName){
 int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 	assert(tokens);
 	enum State {START, OK, REQUIRED};
+	enum State state = START;
 
 	int current_start = 0; //starting index of current cmd
 	token_t current;
 
-	enum State state = START;
 	int len = DynArray_getLength(tokens);
-	REDIR_FLAGS[0] = 0;
-	REDIR_FLAGS[1] = 0;
-	REDIR_FLAGS[2] = 0;
 
+	int redir_flags[3] = {0,0,0};
+	//dfa method used
 	for(int cur = 0; cur <= len ; cur++){ //dfa also checks for end condition, so cur increments 1 more than tokens length.
 		if(cur<len){current = (token_t)DynArray_get(tokens,cur);} //the only place for retrieval of token
 		switch (state){
@@ -195,26 +183,26 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 				current_start = cur+1;
 			}
 			if(token_type(current) != NORMAL){
-				if(check_flags(token_type(current),programName) == FAIL){return FAIL;}
+				if(check_flags(token_type(current),redir_flags,programName) == FAIL){return FAIL;}
 				state = REQUIRED;
 			}
 			else if(cur == len){return SUCCESS;}
 			else{state = OK;}
 			break;
-		
 		case REQUIRED:
 			if(token_type(current) != NORMAL || cur == len){
 				switch (token_type((token_t)DynArray_get(tokens,cur-1))){
-					case PIPE:
-						err_destnotspec(programName);
-						break;
-					case REDIR_OUT:
-						err_output_noname(programName);
-						break;
-					case REDIR_IN:
-						err_input_noname(programName);
-						break;
+				case PIPE:
+					err_destnotspec(programName);
+					break;
+				case REDIR_OUT:
+					err_output_noname(programName);
+					break;
+				case REDIR_IN:
+					err_input_noname(programName);
+					break;
 				}
+				printf("b\n");
 				return FAIL;
 				}
 			else{state = OK;}

@@ -143,7 +143,16 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 				cur_line++;
 				break;
 			}
-			// else if(*cur_line == ">"){} //currently omitted
+			else if(*cur_line == '>'){
+				add_nicely(REDIR_OUT,">",tokens,programName);
+				cur_line++;
+				break;
+			}
+			else if(*cur_line == '<'){
+				add_nicely(REDIR_IN,"<",tokens,programName);
+				cur_line++;
+				break;
+			}
 			else if(*cur_line == '"'){
 				state = IN_QUOTE;
 				// cur_type = NORMAL;
@@ -158,7 +167,7 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 			break;
 
 		case IN_WORD:
-			if(isspace(*cur_line)||isend(*cur_line)||(*cur_line == '|')){ //add < and > here later
+			if(isspace(*cur_line)||isend(*cur_line)||(*cur_line == '|')||(*cur_line == '<')||(*cur_line == '>') ){ //add < and > here later
 				*(cur_val) = '\0';
 				// if(check_builtin2(value_temp)){
 				// 	add_nicely(BUILTIN,value_temp,tokens,programName);

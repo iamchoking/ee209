@@ -48,6 +48,7 @@ int process(char* line,char debug){
 	if(!suc){goto process_end;}
 	if(debug){printf("-------------SYN-------------\n");}
 	suc = syn(tokens,cmds,programName);
+	// printf("c\n");
 	if(debug){
 		if (suc){
 			printf("<ISH> retrieved commands:\n");
@@ -61,9 +62,9 @@ int process(char* line,char debug){
 	suc = exec(cmds,programName,debug);
 	// return 0;
 	if(!suc && debug){printf("<ISH> exec FAIL \n");}
-	if(debug){printf("=============================\n");}
 
 	process_end:
+		if(debug){printf("=============================\n");}
 		delete_cmds(cmds);
 		delete_tokens(tokens);
 	return suc;
@@ -92,14 +93,14 @@ int main(int argc, char *argv[]){
 	strcat(dir_ishrc,"/.ishrc");
 	FILE * file_ishrc = fopen(dir_ishrc,"r");
 	char* x;
-	if(debug){printf("<ISH> Pharsing HOME/.ishrc file: ");}
-	while((x=fgets(line, LINE_SIZE, file_ishrc)) != NULL){
+	if(debug){printf("<ISH> Pharsing %s file: ",dir_ishrc);}
+	while(file_ishrc != NULL && ((x=fgets(line, LINE_SIZE, file_ishrc)) != NULL)){
 		if(debug){printf("%d|%s ",getpid(),dir_ishrc);}
 		printf("%% %s",line);
 		process(line,debug);
 		if(ISH_EXIT_FLAG) goto clean_exit;
 	} //process finished.
-	fclose(file_ishrc);
+	if(file_ishrc){fclose(file_ishrc);}
 	if(debug){printf("<ISH> Pharsing Complete\n");}
 	// free(file_ishrc);
 	/////////////////////////////////////////////////////////
