@@ -42,4 +42,8 @@ void err_params_alias   (char* programName);
 //lexical - related ///////////////////////////
 void err_unmatched(char* programName);
 
+//alias - related /////////////////////////////
+void err_alias_not_found(char* key, char* programName);
+
+
 #endif

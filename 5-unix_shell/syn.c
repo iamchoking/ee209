@@ -125,21 +125,21 @@ int check_flags(int type,char*programName){
 	if(type == NORMAL){return SUCCESS;}
 	// printf("%d,%d,%d",redir_flags[0],redir_flags[1],redir_flags[2]);
 	//check flag phase
-	if(type == PIPE && REDIR_FLAGS[INDEX_PIPE]){err_mult_redir_out(programName);}
-	else if(type == REDIR_OUT && REDIR_FLAGS[INDEX_REDIR_OUT]){err_mult_redir_out(programName);}
-	else if(type == REDIR_IN && REDIR_FLAGS[INDEX_REDIR_IN]){err_mult_redir_in(programName);}
+	if     (type == PIPE      && REDIR_FLAGS[INDEX_PIPE]      ){err_mult_redir_out(programName);}
+	else if(type == REDIR_OUT && REDIR_FLAGS[INDEX_REDIR_OUT] ){err_mult_redir_out(programName);}
+	else if(type == REDIR_IN  && REDIR_FLAGS[INDEX_REDIR_IN]  ){err_mult_redir_in (programName);}
 	else{
 		//raise flag phase
 		switch(type){
 			case PIPE:
-				REDIR_FLAGS[REDIR_IN] = 1;
+				REDIR_FLAGS[INDEX_REDIR_IN] = 1;
 				break;
 			case REDIR_IN:
-				REDIR_FLAGS[REDIR_IN] = 1;
+				REDIR_FLAGS[INDEX_REDIR_IN] = 1;
 				break;
 			case REDIR_OUT:
 				REDIR_FLAGS[INDEX_PIPE] = 1;
-				REDIR_FLAGS[REDIR_OUT] = 1;
+				REDIR_FLAGS[INDEX_REDIR_OUT] = 1;
 				break;		
 		}
 		return SUCCESS;
@@ -161,6 +161,8 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 	REDIR_FLAGS[0] = 0;
 	REDIR_FLAGS[1] = 0;
 	REDIR_FLAGS[2] = 0;
+
+	if(len == 0){return SUCCESS;}
 
 	for(int cur = 0; cur <= len ; cur++){ //dfa also checks for end condition, so cur increments 1 more than tokens length.
 		if(cur<len){current = (token_t)DynArray_get(tokens,cur);} //the only place for retrieval of token

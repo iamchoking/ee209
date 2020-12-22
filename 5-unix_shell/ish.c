@@ -96,26 +96,33 @@ int main(int argc, char *argv[]){
 	// printf("Signal handlers installed\n");
 
 	char cwd[DIR_SIZE];
+	getcwd(cwd,DIR_SIZE);
 	char line[LINE_SIZE];
 
 	aliases = DynArray_new(0);
 
 	////////////////// processing ./ishrc //////////////////
+	chdir(getenv("HOME"));
+
 	char dir_ishrc[LINE_SIZE];
 	strcpy(dir_ishrc, getenv("HOME"));
 	strcat(dir_ishrc,"/.ishrc");
 	FILE * file_ishrc = fopen(dir_ishrc,"r");
 	char* x;
+	int line_count = 0;
 	if(debug){printf("<ISH> Pharsing %s file: ",dir_ishrc);}
 	while(file_ishrc != NULL && ((x=fgets(line, LINE_SIZE, file_ishrc)) != NULL)){
-		if(debug){printf("%d|%s ",getpid(),dir_ishrc);}
+		line_count++;
+		if(debug){printf("%d|%s [line %d]",getpid(),dir_ishrc,line_count);}
 		printf("%% %s",line);
 		process(line,debug);
-		if(ISH_EXIT_FLAG) goto clean_exit;
+		if(ISH_EXIT_FLAG){fclose(file_ishrc); goto clean_exit;}
 	} //process finished.
 	if(file_ishrc){fclose(file_ishrc);}
 	if(debug){printf("<ISH> Pharsing %s Complete\n",dir_ishrc);}
 	// free(file_ishrc);
+
+	chdir(cwd);
 	/////////////////////////////////////////////////////////
 
 	// goto clean_exit;

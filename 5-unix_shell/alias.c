@@ -46,8 +46,6 @@ void print_aliases(DynArray_T aliases){
 	DynArray_map(aliases, print_alias, NULL);
 }
 
-void err_alias_not_found(char* key, char* programName){fprintf(stderr, "%s: alias: %s: not found\n",programName,key);}
-
 alias_t pharse_alias(char* arg){
 	char temp_key[LINE_SIZE] = {0};
 	char temp_value[LINE_SIZE] = {0};

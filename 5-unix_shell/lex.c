@@ -150,7 +150,7 @@ int lex_line(char* line, DynArray_T tokens, int supress, char* programName,int d
 			}
 			else if(*cur_line == '<'){
 				if(supress){add_nicely(NORMAL,"<",tokens,programName);}
-				else{add_nicely(REDIR_OUT,"<",tokens,programName);}
+				else{add_nicely(REDIR_IN,"<",tokens,programName);}
 				cur_line++;
 				break;
 			}

@@ -1,0 +1,13 @@
+sed: -e expression #1, char 1: unknown command: `''
+./ish: Could not find quote pair
+./ish: Could not find quote pair
+./ish: Could not find quote pair
+nosuchcommand: No such file or directory
+./ish: No such file or directory
+./ish: setenv takes one or two parameters
+./ish: unsetenv takes one parameter
+./ish: Pipe or redirection destination is not specified
+./ish: Multiple redirection of standard out
+./ish: Multiple redirection of standard input
+./ish: Multiple redirection of standard input
+./ish: Multiple redirection of standard out
