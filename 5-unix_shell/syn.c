@@ -6,32 +6,13 @@
 #include "dynarray.h"
 #include "syn.h"
 #include "lex.h"
+#include "ish_err.h"
 
 #define NUM_BUILTINS 5
 const char* ISH_BUILTINS[] = {"cd","setenv","unsetenv","exit","alias"};
 int REDIR_FLAGS[] = {0,0,0};
 //add alias here later
 
-enum{FAIL,SUCCESS};
-enum{FALSE,TRUE};
-
-
-
-void err_destnotspec    (char* programName){fprintf(stderr, "%s: Pipe or redirection destination not specified\n",programName);}
-void err_noname         (char* programName){fprintf(stderr, "%s: Missing command name\n",programName);}
-// new errors from redirection
-void err_mult_redir_in  (char* programName){fprintf(stderr, "%s: Multiple redirection of standard input\n",programName);}
-void err_mult_redir_out (char* programName){fprintf(stderr, "%s: Multiple redirection of standard out\n",programName);}
-void err_input_noname   (char* programName){fprintf(stderr, "%s: Standard input redirection without file name\n",programName);}
-void err_output_noname  (char* programName){fprintf(stderr, "%s: Standard output redirection without file name\n",programName);}
-/////
-
-///parameter number errors for builtins
-void err_params_cd      (char* programName){fprintf(stderr, "%s: cd takes one parameter\n",programName);}
-void err_params_setenv  (char* programName){fprintf(stderr, "%s: setenv takes one or two parameters\n",programName);}
-void err_params_unsetenv(char* programName){fprintf(stderr, "%s: unsetenv takes one parameter\n",programName);}
-void err_params_exit    (char* programName){fprintf(stderr, "%s: exit does not take any parameters\n",programName);}
-void err_params_alias   (char* programName){fprintf(stderr, "%s: alias takes one parameter\n",programName);}
 
 struct cmd{
 	enum cmdType type;
@@ -89,6 +70,7 @@ void add_cmd(DynArray_T tokens, DynArray_T cmds, int startI, int endI){
 
 int builtin_validate(cmd_t cmd,int total_len,char* progName){
 	if(cmd->type != CMD_BUILTIN){return TRUE;}
+	// printf("<>validating builtin cmd: %s\n",cmd->name);
 	switch(cmd->name[0]){
 		case 'c': //cd
 			if((total_len != 1) || (cmd->len != 2 && cmd->len != 1) ){err_params_cd(progName);return FALSE;}
@@ -185,7 +167,7 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 		switch (state){
 		case START:
 			if     (token_type(current) != NORMAL){err_noname(programName);return FAIL;}
-			else if(cur == len){return SUCCESS;}
+			else if(cur == len){goto syn_success_init;}
 			else {state = OK;}
 			break;
 		
@@ -198,7 +180,7 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 				if(check_flags(token_type(current),programName) == FAIL){return FAIL;}
 				state = REQUIRED;
 			}
-			else if(cur == len){return SUCCESS;}
+			else if(cur == len){goto syn_success_init;}
 			else{state = OK;}
 			break;
 		
@@ -225,11 +207,9 @@ int syn(DynArray_T tokens, DynArray_T cmds, char* programName){
 		}
 	
 	}
-	if(state == REQUIRED){err_destnotspec(programName);return FAIL;}
-	if(current_start<len){add_cmd(tokens,cmds,current_start,len-1);}
-	//initial cmd built
-
-	if(len != 0){ return builtin_validate(DynArray_get(cmds,0),DynArray_getLength(cmds),programName);}
+	syn_success_init:
+	if(len != 0){
+		if(! builtin_validate(DynArray_get(cmds,0),DynArray_getLength(cmds),programName)){return FAIL;}}
 
 	return SUCCESS;
 }

@@ -3,8 +3,6 @@
 
 #include "dynarray.h"
 
-#define LINE_SIZE 1024
-
 typedef struct Token * token_t;
 
 enum TokenType {PIPE, NORMAL, REDIR_OUT, REDIR_IN};
@@ -22,7 +20,7 @@ void print_token_lame(void* token, void* dummy);
 void print_token_lame_with_type(void* token, void* dummy);
 void print_tokens(DynArray_T tokens, char include_type);
 
-int lex_line(char* line, DynArray_T tokens, char* programName);
+int lex_line(char* line, DynArray_T tokens,int supress, char* programName, int debug);
 
 int add_nicely(enum TokenType type, char* value, DynArray_T tokens, char* programName);
 

@@ -1,17 +1,15 @@
 #include "dynarray.h"
 #include "lex.h"
+#include "ish_err.h"
 
-#include<stdio.h>
-#include<ctype.h>
-#include<string.h>
-#include<assert.h>
-#include<stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <assert.h>
+#include <stdlib.h>
 
 
 #define DEBUG_LEX FALSE //change this to show step by step
-
-enum {FALSE, TRUE};
-enum {FAIL, SUCCESS};
 
 // const char* ISH_BUILTINS[4] = {"cd","setenv","unsetenv","exit"};
 //add alias here later
@@ -57,9 +55,6 @@ int isend(char c){ //checks if c is an end-like character
 	if((c == '\n')||(c == '\0')||(c == EOF)){return 1;}
 	return 0;
 }
-
-void err_alloc(char* programName){fprintf(stderr, "%s: Memory Allocation Failed\n",programName);}
-void err_unmatched(char* programName){fprintf(stderr, "%s: ERROR - unmatched quote\n",programName);}
 
 int print_token(token_t token, char include_type){// include_type = 0 for simple print, 1 for specifying token type
 	if(include_type) printf("<LEX> [");
@@ -117,7 +112,10 @@ int add_nicely(enum TokenType type, char* value, DynArray_T tokens, char* progra
 	return SUCCESS;
 }
 
-int lex_line(char* line, DynArray_T tokens, char* programName){
+int lex_alias(char** cur_line_ref,DynArray_T tokens,char* programName,int debug);
+//declared here, defined later
+
+int lex_line(char* line, DynArray_T tokens, int supress, char* programName,int debug){
 	assert(line);
 	assert(tokens);
 
@@ -139,17 +137,20 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 			}
 			else if(isend(*cur_line)){return SUCCESS;}
 			else if(*cur_line == '|'){
-				add_nicely(PIPE,"|",tokens,programName);
+				if(supress){add_nicely(NORMAL,"|",tokens,programName);}
+				else{add_nicely(PIPE,"|",tokens,programName);}
 				cur_line++;
 				break;
 			}
 			else if(*cur_line == '>'){
-				add_nicely(REDIR_OUT,">",tokens,programName);
+				if(supress){add_nicely(NORMAL,">",tokens,programName);}
+				else{add_nicely(REDIR_OUT,">",tokens,programName);}
 				cur_line++;
 				break;
 			}
 			else if(*cur_line == '<'){
-				add_nicely(REDIR_IN,"<",tokens,programName);
+				if(supress){add_nicely(NORMAL,"<",tokens,programName);}
+				else{add_nicely(REDIR_OUT,"<",tokens,programName);}
 				cur_line++;
 				break;
 			}
@@ -175,6 +176,10 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 				// add_nicely(NORMAL,value_temp,tokens,programName);
 				// DynArray_add(tokens,new_token(NORMAL,value_temp));
 				add_nicely(NORMAL,value_temp,tokens,programName);
+				if(! strcmp(value_temp,"alias")){
+					if(debug){printf("<LEX> alias detected! \n");}
+					if(lex_alias(&cur_line,tokens,programName,debug)==FAIL){return FAIL;}
+				}
 				// printf("Successfully added.\n");
 				cur_val = value_temp;
 				state = IDLE;
@@ -213,4 +218,50 @@ int lex_line(char* line, DynArray_T tokens, char* programName){
 			break;  
 		}
 	}
+}
+
+//lexical analysis of alias argument.
+int lex_alias(char** cur_line_ref,DynArray_T tokens,char* programName,int debug){
+	char* cur_alias_reader = *cur_line_ref;
+	char alias_temp[LINE_SIZE] = {0};
+	char* cur_alias_writer = alias_temp;
+
+	enum quoteIndex{IND_SQ,IND_DQ};
+	int quote_flags[2] = {0,0};
+	while(isspace(*cur_alias_reader)){
+		cur_alias_reader++;
+	}
+	while(TRUE){
+		// printf("%c",*cur_alias_reader);
+		if(isspace(*cur_alias_reader) || isend(*cur_alias_reader || *cur_alias_reader == '|'||*cur_alias_reader == '<'||*cur_alias_reader == '>')){
+			if(quote_flags[IND_SQ]==0 && quote_flags[IND_DQ]==0){
+				//add
+				*cur_alias_writer = '\0';
+				if(cur_alias_writer == alias_temp){return SUCCESS;}
+				add_nicely(NORMAL,alias_temp,tokens,programName);
+				*cur_line_ref = cur_alias_reader;
+				if(debug){printf("<LEX> captured alias: %s\n",alias_temp);}
+				return SUCCESS;
+			}
+			else if (isspace(*cur_alias_reader)){
+				*(cur_alias_writer++) = *(cur_alias_reader++);
+				}
+			else{err_unmatched(programName);return FAIL;}
+		}
+		else if (*cur_alias_reader == '\''){
+			if (quote_flags[IND_DQ] == 0){
+				if(quote_flags[IND_SQ]){quote_flags[IND_SQ] = 0;}
+				else{quote_flags[IND_SQ] = 1;}
+				cur_alias_reader++;
+			}
+			else{*(cur_alias_writer++) = *(cur_alias_reader++);}
+		}
+		else if (*cur_alias_reader == '"'){
+			if(quote_flags[IND_DQ]){quote_flags[IND_DQ] = 0;}
+			else{quote_flags[IND_DQ] = 1;}
+			cur_alias_reader++;
+		}
+		else{*(cur_alias_writer++) = *(cur_alias_reader++);}
+	}
+	return FAIL;
 }

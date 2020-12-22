@@ -1,7 +1,10 @@
 #include "dynarray.h"
-// #include "lex.h"
 #include "syn.h"
 #include "sig.h"
+#include "redir.h"
+#include "ish_err.h"
+#include "exec.h"
+#include "alias.h"
 
 #include<stdio.h>
 #include<ctype.h>
@@ -11,46 +14,6 @@
 #include<sys/wait.h>
 #include<unistd.h>
 #include<errno.h>
-#include<fcntl.h>
-
-enum {FALSE,TRUE};
-enum {FAIL,SUCCESS};
-
-void errno_handle(char* name,char debug){
-	if(debug){fprintf(stderr,"<EXEC> [<BRANCH_ERR> %d]\n",getpid());}
-	switch (errno){
-	case 1:
-		fprintf(stderr,"%s: Operation not permitted\n",name);
-		break;
-	case 2:
-		fprintf(stderr,"%s: No such file or directory\n",name);
-		break;
-	case 5:
-		fprintf(stderr,"%s: I/O error\n",name);
-		break;
-	case 13:
-		fprintf(stderr,"%s: Permission Denied\n",name);
-		break;
-	case 14:
-		fprintf(stderr,"%s: Bad address\n",name);
-		break;
-	case 26:
-		fprintf(stderr,"%s: Text file busy\n",name);
-		break;
-
-	default:
-		fprintf(stderr,"%s: prgram exited with errno %d\n",name,errno );
-		break;
-	}
-}
-
-void err_cd(char* programName){fprintf(stderr, "%s: no such file or directory\n",programName);}
-void err_setenv(char* programName){fprintf(stderr, "%s: setenv failed\n",programName);}
-void err_unsetenv(char* programName){fprintf(stderr, "%s: unsetenv failed\n",programName);}
-void err_exit(char* programName){fprintf(stderr, "%s: exit failed\n",programName);}
-void err_alias(char* programName){fprintf(stderr, "%s: alias failed\n",programName);}
-
-void err_pipe(char* programName){fprintf(stderr, "%s: pipe creation failed.",programName);}
 
 int exec_builtin(cmd_t cmd, char* programName,char debug){
 	if(cmd_type(cmd) != CMD_BUILTIN){return SUCCESS;}
@@ -79,93 +42,9 @@ int exec_builtin(cmd_t cmd, char* programName,char debug){
 			ISH_EXIT_FLAG = 1;
 			break;
 		case 'a': //later for alias
+			handle_alias_function(cmd,aliases,programName,debug);
 			break;
 	}
-	return SUCCESS;
-}
-
-int redirect_in_check(cmd_t cmd){
-	char ** argv = cmd_argv(cmd);
-	for(int i = 0; i<cmd_len(cmd); i++){
-		if(! strcmp("<",argv[i])){
-			return i;
-		}
-	}
-	return 0;
-}
-
-int redirect_out_check(cmd_t cmd){
-	char ** argv = cmd_argv(cmd);
-	for(int i = 0; i<cmd_len(cmd); i++){
-		if(! strcmp(">",argv[i])){
-			return i;
-		}
-	}
-	return 0;
-}
-
-int redirect_in(cmd_t cmd,int index,char* programName,int debug){
-	char ** newargv = calloc(cmd_len(cmd)-1,sizeof(char*));
-	char ** argv = cmd_argv(cmd);
-	char *  target; //target for redirection
-
-	if(debug){
-		printf("<EXEC> REDIRECTION-IN detected: %s\n\t",cmd_name(cmd));
-		print_cmd(cmd,NULL);
-		printf("<EXEC> changed to:\n\t");
-	}
-
-	for(int i = 0; i<=cmd_len(cmd); i++){
-		if(i<index)             {newargv[i] = argv[i];}
-		else if(i == index)     {free(argv[i]);} //free the redirection operator itself
-		else if(i == index + 1) {target = argv[i];} //syntactic analysis made sure that index + 1 is valid
-		else                    {newargv[i-2] = argv[i];}
-	}
-
-	cmd_set_argv(cmd,newargv);
-	cmd_set_len (cmd,cmd_len(cmd)-2);
-	if(debug){print_cmd(cmd,NULL);}
-
-	int in_fd = open(target, O_RDONLY); 
-	free(target);
-	if(in_fd == -1){errno_handle(programName,debug);return FAIL;}
-	fflush(stdin);fflush(stdout);fflush(stderr);
-
-	dup2(in_fd,0);
-	close(in_fd);
-	
-	return SUCCESS;
-}
-
-int redirect_out(cmd_t cmd,int index,char* programName,int debug){
-	char ** newargv = calloc(cmd_len(cmd)-1,sizeof(char*)); //total len - 2 + 1 due to NULL termination
-	char ** argv = cmd_argv(cmd);
-	char *  target; //target for redirection
-
-	if(debug){
-		printf("<EXEC> REDIRECTION-OUT detected: %s\n\t",cmd_name(cmd));
-		print_cmd(cmd,NULL);
-		printf("<EXEC> changed to:\n\t");
-	}
-
-	for(int i = 0; i<=cmd_len(cmd); i++){
-		if(i<index)             {newargv[i] = argv[i];}
-		else if(i == index)     {free(argv[i]);} //free the redirection operator itself
-		else if(i == index + 1) {target = argv[i];} //syntactic analysis made sure that index + 1 is valid
-		else                    {newargv[i-2] = argv[i];}
-	}
-	cmd_set_argv(cmd,newargv);
-	cmd_set_len (cmd,cmd_len(cmd)-2);
-	if(debug){print_cmd(cmd,NULL);}
-
-	int out_fd = open(target,O_WRONLY|O_CREAT|O_TRUNC,0666);
-	free(target);
-	if(out_fd == -1){errno_handle(programName,debug);return FAIL;}
-	fflush(stdin);fflush(stdout);fflush(stderr);
-
-	dup2(out_fd,1);
-	close(out_fd);
-
 	return SUCCESS;
 }
 

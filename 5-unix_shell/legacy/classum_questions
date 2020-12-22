@@ -1,0 +1,105 @@
+I have some quistions on details of this assignement:
+1-1. newline after exit
+it looks like in some instances my program prints a newline after exit,
+% exit
+
+(program exits)
+unlike the ./sampleish. but not always.
+% exit
+(program exits)
+is this okay? or do I have to fix it? Because it looks like the outcomes are different machine by machine
+
+1-2. list of allowed libraries.
+I did upload my list of libraries in the past which got confirmed. But i am also using more libraries now. Is it okay to use all builtin GNU libraries?
+
+I also have some questions on ./sampleish behaviour (especially on aliasing):
+2-1. redirect: redirection non-restore
+consider the following commands run in ./sampleish. Here, ./prog is a prgram that prints [0 1 2 3 4 5 6 7 8 9]
+% ./_prog > out_test
+(% sign vanishes, and the following 3 lines are my input)
+./_prog
+echo ee209
+exit
+in the [out_test] file:
+0 1 2 3 4 5 6 7 8 9 
+% 0 1 2 3 4 5 6 7 8 9 
+% ee209
+% 
+it looks like after a redirection out, the stdout of the shell itself is redirected to the new redirection file. Is this an error? Or do we implment this?
+
+2-2. redirect: pre-mature exit on redirection error
+consider the following commands run in ./sampleish. Here, all directories are non-existent, meaing that the ./sampleish must "gracefully" return.
+% dummy > out_dummy
+dummy: No such file or directory
+(an empty file [out_dummy] created)
+(as explained 2-1, the % sign vanishes)
+dummy < in_dummy
+./sampleish: No such file or directory
+(./sampleish exits by itself)
+As seen above, ./sampleish just exits by itself. Is this an error? Or do we implment this?
+
+2-3. alias: single quoting
+I can't seem to find a good explanation for the behaviour of alias single quoting. Here are some things I have tried:
+
+% alias name=cmd
+% alias           
+alias name='cmd'
+% alias name'='cmd
+% alias
+alias name='cmd'
+% alias name'=''cmd'
+% alias
+alias name='cmd'
+% alias 'na'me'=cmd'
+% alias
+alias name='cmd'
+% alias '''''name'''''=cmd
+% alias
+alias name='cmd'
+% alias name='cmd
+./sampleish: Could not find quote pair
+% alias name='c'mcd'c'
+% alias
+alias name='cmcdc'
+% alias name='cmd''
+./sampleish: Could not find quote pair
+% alias name='c md'
+% alias
+alias name='c md'
+% alias name='c' 'md'
+./sampleish: alias takes one parameter
+% alias name='c'' md'
+% alias
+alias name='c md'
+% alias na' me'='c'' md'
+% alias
+alias name='c md'
+alias na me='c md'
+
+please, can you elaborate more on the required behaviours for alias? the current specification is too ambiguous to implement.
+
+2-4. alias: single and double quoting
+This gets even more confusing when double quotes are added
+
+% alias na"me="'cmd'
+% alias
+alias name='cmd'
+% alias name"=cmd'"
+% alias
+alias name='cmd''
+% alias na"me=''cmd'''''"
+% alias
+alias name='''cmd''''''
+% alias name='cm"d'"
+./sampleish: Could not find quote pair
+% alias name="cmd'''"""
+% alias
+alias name='cmd''''
+% alias "name='"'cm''d'
+% alias
+alias name=''cmd'
+
+so, do we have to replicate all of this behavour? or can we just assume that the format of alias is fixed as:
+alias AliasName='command -arguments'
+
+Thanks.

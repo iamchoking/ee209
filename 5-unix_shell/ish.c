@@ -9,6 +9,8 @@
 #include "syn.h"
 #include "exec.h"
 #include "sig.h"
+#include "ish_err.h"
+#include "alias.h"
 
 #define DIR_SIZE 1024 //defined for debug
 
@@ -18,8 +20,6 @@ char *programName;
 
 DynArray_T tokens;
 DynArray_T cmds;
-
-enum{FAIL,SUCCESS};
 
 int process(char* line,char debug){
 	//processes 1 line the heart of everyting.
@@ -37,7 +37,7 @@ int process(char* line,char debug){
 	printf("=============================\n");
 	printf("-------------LEX-------------\n");
 	}
-	suc = lex_line(line, tokens,programName);
+	suc = lex_line(line, tokens,FALSE,programName,debug);
 	if(debug){
 		if (suc) {
 			printf("<ISH> retrieved tokens:\n");
@@ -46,6 +46,17 @@ int process(char* line,char debug){
 		else{printf("<ISH> lex FAIL \n");}
 	}
 	if(!suc){goto process_end;}
+
+	if(debug){printf("-------ALIAS-PREPROCESS------\n");}
+	suc = alias_preprocess(tokens,aliases,programName,debug);
+	if(debug){
+		if (suc) {}
+		else{printf("<ISH> alias-preprocess FAIL \n");}
+	}
+	if(!suc){goto process_end;}
+
+
+
 	if(debug){printf("-------------SYN-------------\n");}
 	suc = syn(tokens,cmds,programName);
 	// printf("c\n");
@@ -87,6 +98,8 @@ int main(int argc, char *argv[]){
 	char cwd[DIR_SIZE];
 	char line[LINE_SIZE];
 
+	aliases = DynArray_new(0);
+
 	////////////////// processing ./ishrc //////////////////
 	char dir_ishrc[LINE_SIZE];
 	strcpy(dir_ishrc, getenv("HOME"));
@@ -101,12 +114,14 @@ int main(int argc, char *argv[]){
 		if(ISH_EXIT_FLAG) goto clean_exit;
 	} //process finished.
 	if(file_ishrc){fclose(file_ishrc);}
-	if(debug){printf("<ISH> Pharsing Complete\n");}
+	if(debug){printf("<ISH> Pharsing %s Complete\n",dir_ishrc);}
 	// free(file_ishrc);
 	/////////////////////////////////////////////////////////
 
 	// goto clean_exit;
 	if(debug){printf("<ISH> Shell Commandline input mode\n");}
+	if(debug){printf("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n");}
+
 	if(debug){getcwd(cwd,DIR_SIZE);printf("%d|%s ",getpid(),cwd);}
 	printf("%% ");
 
@@ -117,9 +132,9 @@ int main(int argc, char *argv[]){
 		if(debug){getcwd(cwd,DIR_SIZE);printf("%d|%s ",getpid(),cwd);}
 		printf("%% "); 
 	}
-
+	printf("\n");
 	clean_exit:
-		if(debug){printf("<ISH> clean exit");}
-		printf("\n");
+		free_aliases(aliases);
+		if(debug){printf("<ISH> clean exit");printf("\n");}
 	return EXIT_SUCCESS; 
 }
